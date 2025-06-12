@@ -13,10 +13,14 @@ class Moeda {
 
   factory Moeda.fromJson(Map<String, dynamic> json) {
     return Moeda(
-      id: json['id'],
-      nome: json['name'],
-      symbol: json['symbol'],
-      preco: (json['quote']['USD']['price'] as num).toDouble(),
+      id: json['id'] ?? 0,
+      nome: json['name'] ?? '',
+      symbol: json['symbol'] ?? '',
+      preco: (json['quote'] != null &&
+              json['quote']['USD'] != null &&
+              json['quote']['USD']['price'] != null)
+          ? (json['quote']['USD']['price'] as num).toDouble()
+          : 0.0,
     );
   }
 }

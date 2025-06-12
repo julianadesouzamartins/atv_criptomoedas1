@@ -15,6 +15,7 @@ class CryptoListPage extends StatefulWidget {
 class _CryptoListPageState extends State<CryptoListPage> {
   List<Moeda> moedas = [];
   bool isLoading = true;
+  int limit = 20;
 
   @override
   void initState() {
@@ -22,19 +23,18 @@ class _CryptoListPageState extends State<CryptoListPage> {
     carregarMoedas();
   }
 
-  Future<void> carregarMoedas() async {
+  Future<void> carregarMoedas({bool adicionar = false}) async {
+    setState(() => isLoading = true);
     try {
       final api = ApiService();
-      final lista = await api.fetchCoins();
+      final lista = await api.fetchCoins(limit: limit);
       setState(() {
         moedas = lista;
         isLoading = false;
       });
     } catch (e) {
       print('Erro: $e');
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
     }
   }
 
@@ -49,9 +49,7 @@ class _CryptoListPageState extends State<CryptoListPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.favorite),
-            onPressed: () {
-              Navigator.pushNamed(context, '/favorites');
-            },
+            onPressed: () => Navigator.pushNamed(context, '/favorites'),
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -64,43 +62,54 @@ class _CryptoListPageState extends State<CryptoListPage> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: moedas.length,
-              itemBuilder: (context, index) {
-                final moeda = moedas[index];
-                final isFavorite =
-                    favoriteController.isFavorite(moeda.symbol);
+          : Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: moedas.length,
+                    itemBuilder: (context, index) {
+                      final moeda = moedas[index];
+                      final isFavorite =
+                          favoriteController.isFavorite(moeda.symbol);
+                      final iconUrl =
+                          'https://cryptoicon-api.vercel.app/api/icon/${moeda.symbol.toLowerCase()}';
 
-                final iconUrl =
-                    'https://cryptoicon-api.vercel.app/api/icon/${moeda.symbol.toLowerCase()}';
-
-                return ListTile(
-                  leading: Image.network(
-                    iconUrl,
-                    width: 32,
-                    height: 32,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.currency_bitcoin);
+                      return ListTile(
+                        leading: Image.network(
+                          iconUrl,
+                          width: 32,
+                          height: 32,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.currency_bitcoin),
+                        ),
+                        title: Text('${moeda.nome} (${moeda.symbol})'),
+                        subtitle: Text('Preço: \$${moeda.preco.toStringAsFixed(2)}'),
+                        trailing: user != null
+                            ? IconButton(
+                                icon: Icon(
+                                  isFavorite
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: isFavorite ? Colors.red : null,
+                                ),
+                                onPressed: () => favoriteController
+                                    .toggleFavorite(moeda.symbol),
+                              )
+                            : null,
+                      );
                     },
                   ),
-                  title: Text('${moeda.nome} (${moeda.symbol})'),
-                  subtitle:
-                      Text('Preço: \$${moeda.preco.toStringAsFixed(2)}'),
-                  trailing: user != null
-                      ? IconButton(
-                          icon: Icon(
-                            isFavorite
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            color: isFavorite ? Colors.red : null,
-                          ),
-                          onPressed: () {
-                            favoriteController.toggleFavorite(moeda.symbol);
-                          },
-                        )
-                      : null,
-                );
-              },
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      limit += 20;
+                    });
+                    carregarMoedas();
+                  },
+                  child: const Text('Ver mais moedas'),
+                ),
+              ],
             ),
     );
   }
